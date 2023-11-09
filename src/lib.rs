@@ -340,7 +340,7 @@ mod future {
     /// This function returns a `GenFuture` underneath, but hides it in `impl Trait` to give
     /// better error messages (`impl Future` rather than `GenFuture<[closure.....]>`).
     #[doc(hidden)]
-    #[inline]
+    #[inline(always)]
     pub fn from_coroutine<G>(gen: G) -> impl Future<Output = G::Return>
     where
         G: Coroutine<ResumeTy, Yield = ()>,
@@ -357,7 +357,7 @@ mod future {
     {
         type Output = G::Return;
 
-        #[inline]
+        #[inline(always)]
         fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
             let this = self.project();
             // Resume the coroutine, turning the `&mut Context` into a `NonNull` raw pointer. The
@@ -370,7 +370,7 @@ mod future {
     }
 
     #[doc(hidden)]
-    #[inline]
+    #[inline(always)]
     pub unsafe fn get_context<'a, 'b>(cx: ResumeTy) -> &'a mut Context<'b> {
         // SAFETY: the caller must guarantee that `cx.0` is a valid pointer
         // that fulfills all the requirements for a mutable reference.
@@ -397,7 +397,7 @@ mod stream {
     /// This function returns a `GenStream` underneath, but hides it in `impl Trait` to give
     /// better error messages (`impl Stream` rather than `GenStream<[closure.....]>`).
     #[doc(hidden)]
-    #[inline]
+    #[inline(always)]
     pub fn from_coroutine<G, T>(gen: G) -> impl Stream<Item = T>
     where
         G: Coroutine<ResumeTy, Yield = Poll<T>, Return = ()>,
@@ -414,7 +414,7 @@ mod stream {
     {
         type Item = T;
 
-        #[inline]
+        #[inline(always)]
         fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             let this = self.project();
             match this.0.resume(ResumeTy(NonNull::from(cx).cast::<Context<'static>>())) {
@@ -427,7 +427,7 @@ mod stream {
     // This is equivalent to the `futures::stream::StreamExt::next` method.
     // But we want to make this crate dependency as small as possible, so we define our `next` function.
     #[doc(hidden)]
-    #[inline]
+    #[inline(always)]
     pub fn next<S>(stream: &mut S) -> impl Future<Output = Option<S::Item>> + '_
     where
         S: Stream + Unpin,
@@ -443,7 +443,7 @@ mod stream {
     {
         type Output = Option<S::Item>;
 
-        #[inline]
+        #[inline(always)]
         fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
             Pin::new(&mut self.0).poll_next(cx)
         }
@@ -468,7 +468,7 @@ mod try_stream {
     /// This function returns a `GenStream` underneath, but hides it in `impl Trait` to give
     /// better error messages (`impl Stream` rather than `GenStream<[closure.....]>`).
     #[doc(hidden)]
-    #[inline]
+    #[inline(always)]
     pub fn from_coroutine<G, T, E>(gen: G) -> impl FusedStream<Item = Result<T, E>>
     where
         G: Coroutine<ResumeTy, Yield = Poll<T>, Return = Result<(), E>>,
@@ -485,7 +485,7 @@ mod try_stream {
     {
         type Item = Result<T, E>;
 
-        #[inline]
+        #[inline(always)]
         fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             let mut this = self.project();
             if let Some(gen) = this.0.as_mut().as_pin_mut() {
@@ -508,7 +508,7 @@ mod try_stream {
     where
         G: Coroutine<ResumeTy, Yield = Poll<T>, Return = Result<(), E>>,
     {
-        #[inline]
+        #[inline(always)]
         fn is_terminated(&self) -> bool {
             self.0.is_none()
         }
